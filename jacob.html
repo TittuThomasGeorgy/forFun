@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jeep Windshield Date Countdown</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background-color: #0b0d10;
+        color: #fff;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        position: relative;
+        display: inline-block;
+        max-width: 800px;
+        width: 100%;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 10px 35px rgba(0, 0, 0, 0.8);
+      }
+
+      .jeep-image {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      /* Windshield HUD overlay */
+      .glass-timer-container {
+        position: absolute;
+        top: 25%;
+        left: 5%;
+        width: 50%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        /* Perspective tilt aligned with the windshield slope */
+        transform: perspective(600px);
+        background: radial-gradient(
+          circle,
+          rgba(0, 240, 255, 0.08) 0%,
+          rgba(0, 0, 0, 0.5) 95%
+        );
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(0, 240, 255, 0.35);
+        backdrop-filter: blur(1.5px);
+        box-shadow:
+          0 0 15px rgba(0, 240, 255, 0.2),
+          inset 0 0 10px rgba(0, 240, 255, 0.1);
+      }
+
+      .beat {
+        font-size: clamp(12px, 2vw, 15px);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: rgba(0, 240, 255, 0.85);
+        text-shadow: 0 0 6px rgba(0, 240, 255, 0.8);
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+
+      /* Grid for Days, Hours, Mins, Secs */
+      .countdown-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 4px;
+        width: 100%;
+        text-align: center;
+      }
+
+      .unit-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .unit-value {
+        font-family: "Courier New", Courier, monospace;
+        font-size: clamp(14px, 2.1vw, 20px);
+        font-weight: 800;
+        color: #00f0ff;
+        text-shadow:
+          0 0 5px #00f0ff,
+          0 0 10px #00f0ff,
+          0 0 20px rgba(0, 240, 255, 0.8);
+        line-height: 1;
+        display: inline-block;
+        transform-origin: center center;
+        will-change: transform, filter;
+      }
+      .unit-value1 {
+        font-family: "Courier New", Courier, monospace;
+        font-size: clamp(14px, 2.1vw, 20px);
+        font-weight: 800;
+        line-height: 1;
+        display: inline-block;
+        transform-origin: center center;
+        will-change: transform, filter;
+        margin-top: 2px;
+
+        /* Deep navy/midnight blue matching the shirt tone */
+        color: #00c8e6;
+        /* Clean contrast shadow to keep it sharp against the glass reflection */
+        text-shadow:
+          0 1px 2px rgba(255, 255, 255, 0.4),
+          0 0 8px rgba(13, 27, 46, 0.75);
+      }
+
+      /* Trigger class added via JS */
+      .unit-value.beat {
+        animation: beatPulse 0.65s ease-out;
+      }
+
+      .unit-label {
+        font-size: clamp(6px, 0.8vw, 8px);
+        font-weight: 600;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.7);
+        margin-top: 2px;
+      }
+
+      /* Date picker control bar below the image */
+      .controls {
+        margin-top: 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: #141920;
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: 1px solid #232d3b;
+      }
+
+      label {
+        font-size: 13px;
+        color: #8da2b5;
+        margin-bottom: 4px;
+      }
+
+      input[type="datetime-local"] {
+        background: #0d1117;
+        border: 1px solid #00f0ff55;
+        color: #00f0ff;
+        padding: 6px 10px;
+        border-radius: 4px;
+        font-family: inherit;
+        outline: none;
+      }
+
+      input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        cursor: pointer;
+      }
+      /* Container adjustments */
+      #beat {
+        display: block;
+        font-size: clamp(9px, 1.3vw, 13px);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        font-weight: 700;
+        margin-bottom: 6px;
+        text-align: center;
+      }
+
+      /* Flex layout so the boxes and colons sit cleanly in a row */
+      .countdown-grid {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        width: 100%;
+      }
+
+      .unit-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: clamp(24px, 4vw, 38px);
+      }
+
+      /* Colons between boxes */
+      .separator {
+        font-family: "Courier New", Courier, monospace;
+        font-size: clamp(12px, 2.1vw, 20px);
+        font-weight: 800;
+        line-height: 1;
+        color: #00f0ff;
+        align-self: flex-start;
+        margin-top: 1px;
+      }
+
+      /* Heartbeat pulse keyframes */
+      @keyframes beatPulse {
+        0% {
+          transform: scale(1);
+          filter: drop-shadow(0 0 5px #00f0ff);
+        }
+        15% {
+          transform: scale(1.15);
+          filter: drop-shadow(0 0 16px #00f0ff)
+            drop-shadow(0 0 28px rgba(0, 240, 255, 0.9));
+        }
+        30% {
+          transform: scale(1.04);
+        }
+        45% {
+          transform: scale(1.1);
+          filter: drop-shadow(0 0 12px #00f0ff);
+        }
+        60% {
+          transform: scale(1);
+          filter: drop-shadow(0 0 5px #00f0ff);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      .unit-value {
+        display: inline-block;
+        transform-origin: center center;
+        will-change: transform, filter;
+      }
+
+      .unit-value.beat {
+        animation: beatPulse 0.65s ease-out;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Keep your image file named jeep.jpg in the same directory -->
+      <img
+        src="./jacob.png"
+        alt="Jeep Windshield Countdown"
+        class="jeep-image"
+      />
+
+      <div class="glass-timer-container">
+        <span class="unit-value" id="beat">Getting married In</span>
+        <div class="countdown-grid">
+          <div class="unit-box">
+            <span class="unit-value" id="days">00</span>
+            <span class="unit-label">Days</span>
+          </div>
+
+          <span class="unit-value separator">:</span>
+
+          <div class="unit-box">
+            <span class="unit-value" id="hours">00</span>
+            <span class="unit-label">Hours</span>
+          </div>
+
+          <span class="unit-value separator">:</span>
+
+          <div class="unit-box">
+            <span class="unit-value" id="minutes">00</span>
+            <span class="unit-label">Mins</span>
+          </div>
+
+          <span class="unit-value separator">:</span>
+
+          <div class="unit-box">
+            <span class="unit-value" id="seconds">00</span>
+            <span class="unit-label">Secs</span>
+          </div>
+        </div>
+
+        <span class="unit-value1">26 December 2026</span>
+      </div>
+    </div>
+
+    <script>
+      // Set default target to  days from now
+      const defaultDate = new Date("2026-12-26T00:00:00");
+      defaultDate.setDate(defaultDate.getDate() + 7);
+      defaultDate.setHours(0, 0, 0, 0);
+
+      const targetDate = new Date("2026-12-26T00:00:00").getTime();
+
+      const daysEl = document.getElementById("days");
+      const hoursEl = document.getElementById("hours");
+      const minutesEl = document.getElementById("minutes");
+      const secondsEl = document.getElementById("seconds");
+
+      // Selects all elements sharing the .unit-value class (header, digits, and colons)
+      function triggerBeat() {
+        const animatedElements = document.querySelectorAll(".unit-value");
+        animatedElements.forEach((el) => {
+          el.classList.remove("beat");
+          void el.offsetWidth; // Force reflow to restart CSS animation cleanly
+          el.classList.add("beat");
+        });
+      }
+
+      function updateCountdown() {
+        const now = Date.now();
+        const diff = targetDate - now;
+
+        if (diff <= 0) {
+          daysEl.textContent = "00";
+          hoursEl.textContent = "00";
+          minutesEl.textContent = "00";
+          secondsEl.textContent = "00";
+          return;
+        }
+
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const minutes = Math.floor((diff / 1000 / 60) % 60);
+        const seconds = Math.floor((diff / 1000) % 60);
+
+        daysEl.textContent = String(days).padStart(2, "0");
+        hoursEl.textContent = String(hours).padStart(2, "0");
+        minutesEl.textContent = String(minutes).padStart(2, "0");
+        secondsEl.textContent = String(seconds).padStart(2, "0");
+
+        triggerBeat();
+      }
+
+      updateCountdown();
+      setInterval(updateCountdown, 1000);
+    </script>
+  </body>
+</html>
